@@ -10,3 +10,10 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+# Local copies of scan data
+raw.csv
+
+# Local Oauth2 Credential Files
+credentials.json
+token.json
