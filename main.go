@@ -1,7 +1,51 @@
 package main
 
+/*  #include <linux/input.h>
+	#include <linux/input-event-codes.h>
+	#include <unistd.h>
+
+	int ReadChar(int fd) {
+		struct input_event ev;
+		int rd;
+		if ((rd = read(fd, &ev, sizeof(struct input_event))) < sizeof(struct input_event)) {
+			return -1;
+		}
+
+		if (ev.type != EV_KEY && ev.value != 1) {
+			return 0;
+		}
+
+		switch (ev.code) {
+		case KEY_0:
+			return '0';
+		case KEY_1:
+			return '1';
+		case KEY_2:
+			return '2';
+		case KEY_3:
+			return '3';
+		case KEY_4:
+			return '4';
+		case KEY_5:
+			return '5';
+		case KEY_6:
+			return '6';
+		case KEY_7:
+			return '7';
+		case KEY_8:
+			return '8';
+		case KEY_9:
+			return '9';
+		case KEY_ENTER:
+			return '\n';
+		default:
+			return '\0';
+		}
+    }
+*/
+import "C"
+
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,9 +53,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/sys/unix"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -93,7 +140,6 @@ func appendFile(file string, data string) error {
 }
 
 func scanHandler(srvc *sheets.Service, c chan scan) {
-
 	for s := range c {
 		// s is a new scan
 		// The new scan needs to be processed and written to whatever persistance system is being used
@@ -140,22 +186,46 @@ func main() {
 	// Communication will be through a channel
 	ch := make(chan scan, 128)
 	go scanHandler(srv, ch)
-	// Create a new reader interface on stdin
-	reader := bufio.NewReader(os.Stdin)
+
+	// Create a new reader interface on /dev/usb/hiddev0
+	readerPath, err := filepath.EvalSymlinks("/dev/input/by-id/usb-Sycreader_USB_Reader_08FF20150112-event-kbd")
+	if err != nil {
+		panic(err)
+	}
+	file, err := os.Open(readerPath)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	err = unix.IoctlSetInt(int(file.Fd()), C.EVIOCGRAB, 1)
+	if err != nil {
+		panic(err)
+	}
+
+	line := ""
 	for {
-		input, err := reader.ReadString('\n')
-		if err != nil {
+		_ = C.ReadChar(C.int(file.Fd()))
+		input := C.ReadChar(C.int(file.Fd()))
+		if input < 0 {
 			// Stdin should never reach EOF, this condition is likely not a recoverable error
 			break
+		} else if input == 0 {
+			continue
 		}
+		char := rune(input)
+		line = line + string(rune(char))
 
-		// Trim the input string, specifically the trailing newline
-		trimmed := strings.Trim(input, "\n\r \t")
-		// Convert the string to a number
-		uid, err := strconv.ParseUint(trimmed, 10, 64)
-		if err == nil {
-			// Send scan data to the handler routine
-			ch <- scan{uid, time.Now()}
+		if char == '\n' {
+			// Trim the input string, specifically the trailing newline
+			trimmed := strings.Trim(line, "\n\r \t")
+			// Convert the string to a number
+			uid, err := strconv.ParseUint(trimmed, 10, 64)
+			if err == nil {
+				// Send scan data to the handler routine
+				ch <- scan{uid, time.Now()}
+			}
+			line = ""
 		}
 	}
 
