@@ -1,0 +1,15 @@
+[Unit]
+Description=Card Read/Logger service
+After=network.target
+
+[Service]
+PIDFile=/tmp/card-reader.pid
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/card-reader
+ExecStart=/home/pi/card-reader/card-reader
+Restart=always
+RestartSec=30s
+
+[Install]
+WantedBy=multi-user.target
