@@ -1,0 +1,15 @@
+[Unit]
+Description=Card Scanner Logging Service
+After=network.target
+
+[Service]
+type=simple
+Restart=on-failure
+RestartSec=10
+startLimitIntervalSec=60
+User=pi
+WorkingDirectory=/home/pi/prod/
+ExecStart=/usr/bin/python3 scanner.py
+
+[Install]
+WantedBy=multi-user.target
