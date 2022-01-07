@@ -41,7 +41,7 @@ def send_scans(scans):
     signature = hmac.digest(key, scan_string, "sha384")
     sigenc = base64.b64encode(signature).decode("ascii")
     
-    r = requests.post(url, params={"signature":sigenc}, data=scan_string)
+    r = requests.post(url, params={"signature":sigenc}, data=scan_string, headers={"Content-Type":"application/json"})
     if r.status_code != 200 or r.text != "success":
         return False
     
@@ -113,7 +113,7 @@ if __name__ == "__main__":
     scanned_strings = {}
     scan_queue = queue.SimpleQueue()
 
-    scan_thread = threading.Thread(target=handle_scans, args=(scan_queue))
+    scan_thread = threading.Thread(target=handle_scans, args=(scan_queue,))
     scan_thread.start()
 
     try:
