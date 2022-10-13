@@ -36,13 +36,16 @@ def setup():
 def send_scans(scans):
     global SCRIPT_ID, HMAC_KEY
     url = "https://script.google.com/macros/s/" + SCRIPT_ID + "/exec"
-    scan_string = json.dumps(scans)
-    key = base64.b64decode(HMAC_KEY.encode("ascii"))
-    signature = hmac.digest(key, scan_string, "sha384")
-    sigenc = base64.b64encode(signature).decode("ascii")
-    
-    r = requests.post(url, params={"signature":sigenc}, data=scan_string, headers={"Content-Type":"application/json"})
-    if r.status_code != 200 or r.text != "success":
+    try:
+        scan_string = json.dumps(scans)
+        key = base64.b64decode(HMAC_KEY.encode("ascii"))
+        signature = hmac.digest(key, scan_string, "sha384")
+        sigenc = base64.b64encode(signature).decode("ascii")
+
+        r = requests.post(url, params={"signature":sigenc}, data=scan_string, headers={"Content-Type":"application/json"})
+        if r.status_code != 200 or r.text != "success":
+            return False
+    except:
         return False
     
     return True
