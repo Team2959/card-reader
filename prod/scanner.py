@@ -78,8 +78,8 @@ def handle_scans(scan_queue):
             c.executemany("INSERT INTO scans VALUES (?,?,?)", [(s["card_number"], s["timestamp"], s["scan_id"]) for s in scans])
         else:
             # if scans are send successfully fetch all scans from the local database and send them as well
+            scans = []
             for row in c.execute("SELECT card_number, time_stamp, scan_id FROM scans"):
-                scans = []
                 scans.append({
                     "scan_id":row[2],
                     "timestamp":row[1],
