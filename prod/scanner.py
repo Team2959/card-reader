@@ -39,7 +39,7 @@ def send_scans(scans):
     try:
         scan_string = json.dumps(scans)
         key = base64.b64decode(HMAC_KEY.encode("ascii"))
-        signature = hmac.digest(key, scan_string, "sha384")
+        signature = hmac.digest(key, scan_string.encode("ascii"), "sha384")
         sigenc = base64.b64encode(signature).decode("ascii")
 
         r = requests.post(url, params={"signature":sigenc}, data=scan_string, headers={"Content-Type":"application/json"})
