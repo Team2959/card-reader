@@ -36,13 +36,16 @@ def setup():
 def send_scans(scans):
     global SCRIPT_ID, HMAC_KEY
     url = "https://script.google.com/macros/s/" + SCRIPT_ID + "/exec"
-    scan_string = json.dumps(scans)
-    key = base64.b64decode(HMAC_KEY.encode("ascii"))
-    signature = hmac.digest(key, scan_string, "sha384")
-    sigenc = base64.b64encode(signature).decode("ascii")
-    
-    r = requests.post(url, params={"signature":sigenc}, data=scan_string, headers={"Content-Type":"application/json"})
-    if r.status_code != 200 or r.text != "success":
+    try:
+        scan_string = json.dumps(scans)
+        key = base64.b64decode(HMAC_KEY.encode("ascii"))
+        signature = hmac.digest(key, scan_string.encode("ascii"), "sha384")
+        sigenc = base64.b64encode(signature).decode("ascii")
+
+        r = requests.post(url, params={"signature":sigenc}, data=scan_string, headers={"Content-Type":"application/json"})
+        if r.status_code != 200 or r.text != "success":
+            return False
+    except:
         return False
     
     return True
@@ -75,8 +78,8 @@ def handle_scans(scan_queue):
             c.executemany("INSERT INTO scans VALUES (?,?,?)", [(s["card_number"], s["timestamp"], s["scan_id"]) for s in scans])
         else:
             # if scans are send successfully fetch all scans from the local database and send them as well
+            scans = []
             for row in c.execute("SELECT card_number, time_stamp, scan_id FROM scans"):
-                scans = []
                 scans.append({
                     "scan_id":row[2],
                     "timestamp":row[1],
